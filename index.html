@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!-- Librerías -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CASINO ORO - DADO DORADO ✨</title>
+
+  <!-- Tipografías -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Montserrat:wght@600;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== Base original ===== */
+    #premios-container {
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .fila-premios { display: flex; justify-content: center; gap: 10px; }
+
+    #dado { font-size: 100px; margin: 20px 0; transition: transform 0.3s ease; }
+    .dado-animado { animation: girarDado 3s ease; }
+    @keyframes girarDado {
+      0% { transform: rotate(0deg); }
+      25% { transform: rotate(180deg) scale(1.2); }
+      50% { transform: rotate(360deg); }
+      75% { transform: rotate(540deg) scale(1.1); }
+      100% { transform: rotate(720deg) scale(1); }
+    }
+    .cara-dado {
+      background-color: white; color: black; font-weight: bold; border-radius: 12px;
+      padding: 10px; width: 200px; height: 70px; display: flex; justify-content: center;
+      align-items: center; text-align: center; font-size: 1.1rem; box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    }
+
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: 'Montserrat', 'Arial Black', system-ui, sans-serif;
+      text-transform: uppercase;
+      background: linear-gradient(to bottom right, #000000, #0b0b0b, #000000);
+      overflow: hidden;
+      color: #fff;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0;
+      background: radial-gradient(white 0.7px, transparent 1px), radial-gradient(white 0.7px, transparent 1px);
+      background-size: 10px 10px, 20px 20px; background-position: 0 0, 5px 5px;
+      opacity: 0.06; z-index: 0;
+    }
+
+    .pantalla {
+      display: none; flex-direction: column; justify-content: flex-start; align-items: center;
+      height: 100%; padding: 10px 20px 20px 20px; text-align: center; position: relative; z-index: 1;
+    }
+    #pantalla-bienvenida { display: flex; }
+
+    input, button, a.btn {
+      padding: 15px; margin-top: 15px; border: none; border-radius: 12px;
+      font-size: 1.2rem; width: 90%; max-width: 420px; text-align: center;
+      text-decoration: none;
+    }
+    input::placeholder { text-transform: uppercase; text-align: center; }
+
+    #dado {
+      width: 100px; height: 100px; margin: 30px auto; background-color: #fff9e6; border-radius: 16px;
+      box-shadow: 0 0 20px rgba(255,215,0,0.25), 0 8px 18px rgba(0,0,0,.35);
+      display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+      gap: 5px; justify-items: center; align-items: center; transition: transform 0.2s ease;
+    }
+    .punto { width: 15px; height: 15px; background-color: #1a1200; border-radius: 50%; }
+    .dado-girando { animation: girarDado 3s ease; }
+
+    #mensaje-premio {
+      font-size: 1.25rem; margin-top: 18px; background-color: rgba(255, 215, 0, 0.10);
+      padding: 14px; border-radius: 14px; color: #fff; text-align: center; white-space: pre-line;
+      border: 1px solid rgba(255,215,0,.25);
+    }
+    .confeti { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+    h1, h2, p { margin: 10px 0; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 2.2rem; }
+
+    /* Botón apagado (visual y UX) */
+    button:disabled { opacity: .55; cursor: not-allowed; filter: grayscale(.15); }
+
+    /* ===== Tema ORO (override visual) ===== */
+    :root{
+      --gold-ink: #fff7d6;         /* texto marfil dorado */
+      --gold-bg1: #0a0a0a;
+      --gold-bg2: #14110b;
+      --gold-accent-1: #ffd65a;    /* dorado claro */
+      --gold-accent-2: #c59b00;    /* dorado oscuro */
+      --gold-card: #fff1bf;        /* tarjeta pergamino dorado */
+      --gold-card-ink: #1c1404;
+    }
+    html, body{
+      color: var(--gold-ink);
+      background:
+        radial-gradient(1200px 700px at 15% -10%, rgba(197,155,0,.13) 0%, transparent 60%),
+        radial-gradient(900px 600px at 110% 10%, rgba(255, 215, 0, .08) 0%, transparent 60%),
+        linear-gradient(135deg, var(--gold-bg1), var(--gold-bg2)) !important;
+    }
+    h2{
+      font-family: 'Cinzel', serif !important;
+      letter-spacing: .5px;
+      color: var(--gold-accent-1) !important;
+      text-shadow: 0 2px 0 rgba(0,0,0,.65);
+    }
+    #tirar-btn{
+      background: linear-gradient(180deg, var(--gold-accent-1), var(--gold-accent-2)) !important;
+      color: #1b1304 !important;
+      border: 2px solid #7a5c00;
+      box-shadow: 0 6px 0 #7a5c00, 0 10px 18px rgba(0,0,0,.35);
+      border-radius: 14px;
+      cursor: pointer;
+    }
+    #tirar-btn:active{ transform: translateY(1px); box-shadow: 0 5px 0 #7a5c00, 0 8px 14px rgba(0,0,0,.35); }
+    .cara-dado{
+      background: radial-gradient(120% 100% at 50% -10%, #fffbe6 0%, var(--gold-card) 35%, #ffe08a 120%);
+      color: var(--gold-card-ink) !important;
+      border: 2px solid rgba(122, 92, 0, .35);
+      box-shadow: 0 6px 14px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.45);
+      border-radius: 14px;
+    }
+
+    /* Botón WSP */
+    .btn-wsp{
+      background: linear-gradient(180deg, #25D366, #128C7E);
+      color: #fff; display: none; /* aparece solo al ganar */
+      border: 0; border-radius: 14px; box-shadow: 0 6px 0 #0c5e51, 0 10px 18px rgba(0,0,0,.35);
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    .btn-wsp:active{ transform: translateY(1px); box-shadow: 0 5px 0 #0c5e51, 0 8px 14px rgba(0,0,0,.35); }
+
+    /* ===== Mobile: 3 y 3 fijo, compacto ===== */
+    @media (max-width: 520px){
+      .pantalla{ padding: 12px 12px calc(18px + env(safe-area-inset-bottom)); overflow-y: auto; }
+      #premios-container{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; justify-items: center; }
+      .fila-premios{ display: contents; } /* aplanar a 2 cols × 3 filas */
+      .cara-dado{ width: 44vw; max-width: 210px; height: 56px; padding: 8px 10px; font-size: .95rem; }
+      #dado{ width: 82px; height: 82px; gap: 4px; margin: 16px auto; }
+      .punto{ width: 11px; height: 11px; }
+      #tirar-btn, .btn-wsp{ width: 92%; margin: 12px auto 8px; padding: 12px 10px; font-size: 1rem; }
+      #mensaje-premio{ width: 92%; font-size: .95rem; line-height: 1.25; }
+    }
+    @media (max-width: 360px){
+      #premios-container{ grid-template-columns: 1fr; } /* 1 por fila en muy angostas */
+      .cara-dado{ width: 90vw; max-width: none; height: 54px; font-size: .95rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 🎉 PANTALLA DE BIENVENIDA -->
+  <div id="pantalla-bienvenida" class="pantalla" style="display:flex;">
+    <h2>✨ CASINO ORO ✨</h2>
+    <h1>💫 BIENVENIDO AL DADO DORADO 🎲</h1>
+    <p>INGRESÁ TU NOMBRE Y BRILLÁ ✨</p>
+    <input id="input-usuario" type="text" placeholder="ESCRIBÍ TU NOMBRE" />
+    <button id="btn-ingresar">ENTRAR AL ORO ✅</button>
+  </div>
+
+  <!-- 🎮 JUEGO PRINCIPAL -->
+  <div id="pantalla-juego" class="pantalla">
+    <div style="text-align: center; margin-bottom: 10px;">
+      <h2>✨ CASINO ORO ✨</h2>
+      <p style="font-size: 1rem;">🎲 LANZÁ EL DADO Y GANA TU ORO 💛</p>
+      <div id="info-superior">
+        <div id="usuario-nombre">👤 JUGADOR: -</div>
+        <div id="fecha-hora">🗓️ FECHA - ⏰ HORA</div>
+      </div>
+    </div>
+
+    <!-- Premios -->
+    <div id="premios-container">
+      <div class="fila-premios">
+        <div class="cara-dado">1<br>1.000 MONEDAS DE ORO 🪙</div>
+        <div class="cara-dado">2<br>2.000 MONEDAS DE ORO 🪙</div>
+        <div class="cara-dado">3<br>3.000 MONEDAS DE ORO 🪙</div>
+      </div>
+      <div class="fila-premios">
+        <div class="cara-dado">4<br>4.000 LINGOTES ✨</div>
+        <div class="cara-dado">5<br>5.000 JACKPOT DORADO 🏆</div>
+        <div class="cara-dado">6<br>6.000 TESORO REAL 💰</div>
+      </div>
+    </div>
+
+    <!-- Dado + botón + mensaje -->
+    <div id="dado" class="dado"></div>
+    <button id="tirar-btn">LANZAR DADO ✨</button>
+    <a id="btn-wsp" class="btn btn-wsp" href="#" target="_blank" rel="noopener">RECLAMAR POR WHATSAPP</a>
+    <div id="mensaje-premio"></div>
+  </div>
+
+  <canvas class="confeti" id="canvas-confeti"></canvas>
+
+  <script>
+    /* ===== Constantes ===== */
+    const premios = [
+      "1.000 MONEDAS DE ORO 🪙",
+      "2.000 MONEDAS DE ORO 🪙",
+      "3.000 MONEDAS DE ORO 🪙",
+      "4.000 LINGOTES ✨",
+      "5.000 JACKPOT DORADO 🏆",
+      "6.000 TESORO REAL 💰"
+    ];
+
+    /* ===== NUEVA nube (tus credenciales) ===== */
+    const SUPABASE_URL = 'https://wpoutjkljkrbliikazkh.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwb3V0amtsamtyYmxpaWthemtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5ODAxMjAsImV4cCI6MjA2ODU1NjEyMH0.8aZys2dBiNbLis7ls7ZwiBt25eWbsSvSzjpO21Al2r8';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false }});
+    window.client = sb;
+
+    /* ===== Casino (se guarda en columna 'casino') ===== */
+    const CASINO = 'CASINO ORO DADOS';
+
+    /* ===== WhatsApp ===== */
+    const WSP_NUMERO = '5491139432743'; // el que pasaste
+    function armarLinkWsp(usuario, premio){
+      const texto = `Hola, soy ${usuario}, gané ${premio} en el juego del dado CASINO ORO.`;
+      return `https://wa.me/${WSP_NUMERO}?text=${encodeURIComponent(texto)}`;
+    }
+
+    /* ===== Hora en vivo (AR) ===== */
+    function actualizarHora() {
+      const ahora = new Date();
+      const opciones = { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", second: "2-digit" };
+      const horaArg = ahora.toLocaleTimeString('es-AR', opciones);
+      const fecha = ahora.toLocaleDateString('es-AR');
+      document.getElementById("fecha-hora").innerText = `🗓️ ${fecha} - ⏰ ${horaArg}`;
+    }
+    setInterval(actualizarHora, 1000); actualizarHora();
+
+    /* ===== Utils: fecha AR + fingerprint ===== */
+    function fechaHoyAR() {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
+    }
+    async function sha256hex(str){
+      const enc = new TextEncoder().encode(str);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    function getOrCreateSeed(){
+      let s = localStorage.getItem('rg_seed');
+      if(!s){ s = Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('rg_seed', s); }
+      return s;
+    }
+    async function getFingerprint(){
+      const bits = [
+        navigator.userAgent, navigator.language, navigator.platform,
+        screen.width+'x'+screen.height+'@'+(window.devicePixelRatio||1),
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'tz',
+        getOrCreateSeed()
+      ].join('|');
+      return await sha256hex(bits);
+    }
+
+    /* ===== Estado ===== */
+    let usuario = "";
+    let fingerprint = "";
+    let ultimoPremio = "";
+
+    /* ===== UI ===== */
+    document.getElementById('btn-ingresar').addEventListener('click', iniciarJuego);
+    document.getElementById('tirar-btn').addEventListener('click', tirarDado);
+
+    function mostrarCara(cara) {
+      const dado = document.getElementById("dado");
+      dado.innerHTML = "";
+
+      if (cara === null) {
+        const g = document.createElement("div");
+        g.style.fontSize = "2.5rem";
+        g.style.fontWeight = "800";
+        g.style.color = "#1b1304";
+        g.innerText = "O"; // O de Oro
+        g.style.gridColumn = "2";
+        g.style.gridRow = "2";
+        dado.appendChild(g);
+        return;
+      }
+
+      const configuraciones = {
+        1: [4],
+        2: [0, 8],
+        3: [0, 4, 8],
+        4: [0, 2, 6, 8],
+        5: [0, 2, 4, 6, 8],
+        6: [0, 2, 3, 5, 6, 8]
+      };
+      const puntos = configuraciones[cara + 1];
+
+      for (let i = 0; i < 9; i++) {
+        const dot = document.createElement("div");
+        if (puntos.includes(i)) {
+          dot.className = "punto";
+          dado.appendChild(dot);
+        } else {
+          const empty = document.createElement("div");
+          dado.appendChild(empty);
+        }
+      }
+    }
+
+    /* ===== Bloqueo ===== */
+    async function yaJugoHoy(username, fp) {
+      try {
+        const { data, error } = await sb
+          .from('giros')
+          .select('usuario,premio')
+          .eq('fecha', fechaHoyAR())
+          .eq('casino', CASINO)
+          .or(`usuario.eq.${username},fingerprint.eq.${fp}`)
+          .limit(1)
+          .maybeSingle();
+        if (error && error.code !== 'PGRST116') { console.error('select error', error); return null; }
+        return data || null;
+      } catch (e) { console.error('select ex', e); return null; }
+    }
+
+    async function registrarGiro(username, fp, premioTxt) {
+        function ahoraARIso() {
+  const tz = 'America/Argentina/Buenos_Aires';
+  const d = new Date();
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false
+    }).formatToParts(d).map(p => [p.type, p.value])
+  );
+  // Argentina usa -03:00 todo el año
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}-03:00`;
+}
+  const payload = {
+    usuario: username,
+    fingerprint: fp,
+    premio: premioTxt,        // texto exacto del premio
+    fecha: fechaHoyAR(),      // YYYY-MM-DD (AR) -> tu columna DATE
+    hora: ahoraARIso(),       // TIMESTAMP con zona: 2025-08-22T14:51:17-03:00
+    casino: CASINO
+  };
+  const { error } = await sb.from('giros').insert([payload]);
+  if (error) throw error;
+}
+
+    /* ===== Flujo ===== */
+    async function iniciarJuego() {
+      const input = document.getElementById("input-usuario");
+      usuario = (input.value || '').trim();
+      if (!usuario) { input.style.border = '2px solid #f33'; return; }
+      input.style.border = '';
+
+      fingerprint = await getFingerprint();
+
+      document.getElementById("usuario-nombre").innerText = `👤 JUGADOR: ${usuario}`;
+      document.getElementById("pantalla-bienvenida").style.display = "none";
+      document.getElementById("pantalla-juego").style.display = "flex";
+      actualizarHora();
+      mostrarCara(null);
+
+      const jugo = await yaJugoHoy(usuario, fingerprint);
+      const btn = document.getElementById('tirar-btn');
+      const msg = document.getElementById('mensaje-premio');
+      const btnWsp = document.getElementById('btn-wsp');
+      btnWsp.style.display = 'none'; // ocultar WSP al entrar
+
+      if (jugo) {
+        btn.disabled = true;
+        msg.innerText = `⛔ YA JUGASTE HOY COMO ${jugo.usuario.toUpperCase()} — Premio: ${jugo.premio}`;
+      } else {
+        btn.disabled = false;
+        msg.innerText = '';
+      }
+
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      document.getElementById("pantalla-juego").scrollIntoView({ block: 'start' });
+    }
+
+    async function tirarDado() {
+      const dado = document.getElementById("dado");
+      const mensaje = document.getElementById("mensaje-premio");
+      const boton = document.getElementById("tirar-btn");
+      const btnWsp = document.getElementById("btn-wsp");
+
+      // Revalidación final de bloqueo
+      const jugo = await yaJugoHoy(usuario, fingerprint);
+      if (jugo) {
+        mensaje.innerText = `⛔ YA COBRASTE HOY — ${jugo.premio}`;
+        boton.disabled = true;
+        btnWsp.style.display = 'none';
+        return;
+      }
+
+      boton.disabled = true;
+      mensaje.innerText = "";
+      btnWsp.style.display = 'none';
+
+      let vueltas = 0;
+      const intervalo = setInterval(() => {
+        const caraRandom = Math.floor(Math.random() * 6);
+        mostrarCara(caraRandom);
+        dado.style.transform = `rotate(${Math.random() * 720}deg)`;
+        vueltas++;
+        if (vueltas >= 30) clearInterval(intervalo);
+      }, 100);
+
+      setTimeout(async () => {
+        const resultado = Math.floor(Math.random() * 6);
+        mostrarCara(resultado);
+        dado.style.transform = "rotate(0deg)";
+
+        const premioTxt = premios[resultado];
+        ultimoPremio = premioTxt;
+
+        const mensajeTexto = `✨ ${usuario}, ¡TE LLEVÁS ${premioTxt}! ✨\n📸 CAPTURÁ Y RECLAMÁ TU PREMIO`;
+        mensaje.innerText = mensajeTexto;
+
+        // Mostrar botón WhatsApp con link armado
+        const link = armarLinkWsp(usuario, premioTxt);
+        btnWsp.href = link;
+        btnWsp.style.display = 'inline-block';
+
+        lanzarConfeti();
+
+        try {
+          await registrarGiro(usuario, fingerprint, premioTxt);
+        } catch (e) {
+          console.error(e);
+          mensaje.innerText += `\n⚠️ No se pudo registrar la jugada. Intentá más tarde.`;
+        } finally {
+          // Si querés permitir un solo tiro por sesión, lo dejamos disabled.
+          // Si querés que quede activo de nuevo, descomentá la línea:
+          // boton.disabled = false;
+        }
+      }, 3000);
+    }
+
+    /* ===== Confeti (dorado/plateado) ===== */
+    function lanzarConfeti() {
+      const canvas = document.getElementById("canvas-confeti");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const cantidad = 150;
+      const confetis = [];
+
+      for (let i = 0; i < cantidad; i++) {
+        confetis.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          r: Math.random() * 6 + 4,
+          d: Math.random() * cantidad,
+          color: Math.random() > 0.5 ? "#FFD700" : "#C0C0C0",
+          tilt: Math.floor(Math.random() * 10) - 10
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < cantidad; i++) {
+          const c = confetis[i];
+          ctx.beginPath();
+          ctx.lineWidth = c.r / 2;
+          ctx.strokeStyle = c.color;
+          ctx.moveTo(c.x + c.tilt + c.r / 4, c.y);
+          ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 4);
+          ctx.stroke();
+        }
+        actualizar();
+      }
+
+      function actualizar() {
+        for (let i = 0; i < cantidad; i++) {
+          const c = confetis[i];
+          c.y += Math.cos(c.d) + 1 + c.r / 2;
+          if (c.y > canvas.height) {
+            c.y = -10;
+            c.x = Math.random() * canvas.width;
+          }
+        }
+      }
+
+      setInterval(draw, 20);
+    }
+  </script>
+</body>
+</html>
